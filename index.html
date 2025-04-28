@@ -24,7 +24,8 @@
             width: 100vw;
             height: 100vh;
             background: white;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             position: relative;
         }
         .toolbar {
@@ -37,6 +38,9 @@
             gap: 15px;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
             z-index: 10;
+            transition: transform 0.3s ease;
+            position: absolute;
+            width: 100%;
         }
         .toolbar h1 {
             margin-right: auto;
@@ -268,6 +272,7 @@
             position: relative;
             overflow: hidden;
             z-index: 1;
+            margin-right: 40px;
         }
         .action-buttons #save::before {
             content: "";
@@ -288,7 +293,20 @@
             overflow: hidden;
             position: relative;
             background: linear-gradient(120deg, #f5f7fa, #e8ecf1);
+            transition: all 0.3s ease;
+            margin-top: 0;
+            padding-top: 0;
         }
+        
+        .toolbar ~ .canvas-container {
+            padding-top: 70px; /* 默认状态下为工具栏腾出空间 */
+        }
+        
+        .toolbar.collapsed + .canvas-container {
+            padding-top: 0;
+            height: 100vh;
+        }
+        
         canvas {
             display: block;
             background-color: transparent;
@@ -305,6 +323,46 @@
             display: none;
             z-index: 1000;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 工具栏控制按钮 */
+        .toolbar-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 20;
+        }
+        
+        .toolbar-control-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .toolbar-control-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translateY(-2px);
+        }
+        
+        /* 工具栏展开/收起状态 */
+        .toolbar.collapsed {
+            transform: translateY(-100%);
+            box-shadow: none;
+        }
+        
+        .toolbar.collapsed + .canvas-container {
+            padding-top: 0;
+            height: 100vh;
         }
         
         /* 响应式调整 */
@@ -364,9 +422,6 @@
                         <div class="color-option" style="background-color: #2ecc71;" data-color="#2ecc71"></div>
                         <div class="color-option" style="background-color: #3498db;" data-color="#3498db"></div>
                         <div class="color-option" style="background-color: #f39c12;" data-color="#f39c12"></div>
-                        <div class="color-option" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
-                        <div class="color-option" style="background-color: #1abc9c;" data-color="#1abc9c"></div>
-                        <div class="color-option" style="background-color: #34495e;" data-color="#34495e"></div>
                         <div class="color-more-btn" id="more-colors">+</div>
                     </div>
                     <button id="eraser">橡皮擦</button>
@@ -397,6 +452,20 @@
         <div class="canvas-container">
             <canvas id="drawing-board" resize></canvas>
             <div class="cursor-indicator"></div>
+            
+            <!-- 工具栏控制按钮 -->
+            <div class="toolbar-controls">
+                <div class="toolbar-control-btn" id="collapse-toolbar" title="隐藏工具栏">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/>
+                    </svg>
+                </div>
+                <div class="toolbar-control-btn" id="expand-toolbar" title="展开工具栏" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -929,6 +998,39 @@
             
             // 加载自定义颜色
             loadCustomColors();
+            
+            // 工具栏展开和隐藏功能
+            const collapseToolbarBtn = document.getElementById('collapse-toolbar');
+            const expandToolbarBtn = document.getElementById('expand-toolbar');
+            const toolbar = document.querySelector('.toolbar');
+            
+            collapseToolbarBtn.addEventListener('click', function() {
+                toolbar.classList.add('collapsed');
+                collapseToolbarBtn.style.display = 'none';
+                expandToolbarBtn.style.display = 'flex';
+                
+                // 更新Paper.js画布尺寸
+                paper.view.viewSize = new paper.Size(
+                    canvasContainer.clientWidth,
+                    canvasContainer.clientHeight
+                );
+                paper.view.update();
+            });
+            
+            expandToolbarBtn.addEventListener('click', function() {
+                toolbar.classList.remove('collapsed');
+                expandToolbarBtn.style.display = 'none';
+                collapseToolbarBtn.style.display = 'flex';
+                
+                // 延迟一下更新画布尺寸，等待过渡完成
+                setTimeout(function() {
+                    paper.view.viewSize = new paper.Size(
+                        canvasContainer.clientWidth,
+                        canvasContainer.clientHeight
+                    );
+                    paper.view.update();
+                }, 300);
+            });
             
             // 窗口大小变化时重新计算
             paper.view.onResize = function(event) {
